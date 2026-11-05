@@ -1,0 +1,8 @@
+{
+  "name": "AldesConnectBox clone (aldes_cb)",
+  "version": "0.1.0",
+  "description": "Byte-exakter USB-Klon der AldesConnectBox (STM32 VCP) auf ESP32-S3 mit TinyUSB-Klassentreiber, plus Entitaeten fuer das 0x21-Protokoll.",
+  "author": "@kikisarem",
+  "target_framework": "esp-idf",
+  "esphome_version": "2026.7.4"
+}

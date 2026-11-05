@@ -1,0 +1,161 @@
+# ESPHome based clone of Aldes ConnectBox clone based on ESP32-S3 
+#
+# Based on the ongoing work in 
+#   https://github.com/kikisarem/aldes-pilot-community
+#
+# Credit goes mainly to the great folks getting this protocol analysed and
+# mapped to HomeAssistant
+#
+# Vor dem ersten Build:
+#   * wifi: SSID/Passwort und die statische Adresse unten anpassen
+#   * api: encryption: key erzeugen (leer lassen, `esphome config` schlaegt
+#     eine ID vor)
+#
+# The USB-Part (VID 0x0483 / PID 0x5740, "STM32 Virtual ComPort") is a
+# byte-exact clone of the real Aldes ConnectBox; `lsusb -v` must be identical.
+
+substitutions:
+  name: aldes-ha-connect
+  friendly_name: "Aldes HA-Connect"
+
+  static_ip: 192.168.178.221
+  gateway: 192.168.178.1
+  subnet: 255.255.255.0
+  dns1: 192.168.178.1
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+  comment: "Clone of the Aldes ConnectBox, USB-OTG-HS to the PAC"
+
+external_components:
+  - source: github://ma-ku/aldes-ha-connect@main
+    components: [ aldes_cb, aldes_cb_services ]
+
+esp32:
+  # The board must support USB OTG natively (e.g. S3 variants)
+  board: esp32-s3-devkitc1-n16r8
+  framework:
+    type: esp-idf
+
+logger:
+  # UART0 (GPIO43 TX / GPIO44 RX) — USB_SERIAL_JTAG remains free. The log lines from
+  # the library arrive as text_sensor "Log ConnectBox"
+  hardware_uart: UART0
+  level: INFO
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  manual_ip:
+    static_ip: ${static_ip}
+    gateway: ${gateway}
+    subnet: ${subnet}
+    dns1: ${dns1}
+
+api:
+  # aldes_cb.send/.arm/.stop/.usb_on (services.py)
+  custom_services: true
+  # text_sensor.frame_event -> Event esphome.aldes_frame
+  homeassistant_services: true
+
+ota:
+  - platform: esphome
+
+# ------------------------------------------------------------------ USB-Clone
+
+aldes_cb:
+  id: cb
+  report_window: 25s
+  status_period: 10s
+
+aldes_cb_services:
+  aldes_cb_id: cb
+
+# ------------------------------------------------------------------- Sensors
+
+sensor:
+  - platform: aldes_cb
+    aldes_cb_id: cb
+    setpoint_k1:
+      name: "Consigne Zone 1"
+    setpoint_k2:
+      name: "Consigne Zone 2"
+    setpoint_k3:
+      name: "Consigne Zone 3"
+    setpoint_k4:
+      name: "Consigne Zone 4"
+    temperature_k1:
+      name: "Température Zone 1"
+    temperature_k2:
+      name: "Température Zone 2"
+    temperature_k3:
+      name: "Température Zone 3"
+    temperature_k4:
+      name: "Température Zone 4"
+    air_mode:
+      name: "Mode air (brut)"
+    ecs_mode:
+      name: "Mode ECS (brut)"
+    clock:
+      name: "Horloge PAC"
+
+text_sensor:
+  - platform: aldes_cb
+    aldes_cb_id: cb
+    log:
+      name: "Log ConnectBox"
+      entity_category: diagnostic
+    status:
+      name: "Statut ConnectBox"
+      entity_category: diagnostic
+    frame:
+      name: "Dernière trame"
+      entity_category: diagnostic
+    frame_event:
+      name: "Événement trame"
+      # Raw Frame as HA-Event, to allow analysis without USB access.
+      on_value:
+        - homeassistant.event:
+            event: esphome.aldes_frame
+            data:
+              value: !lambda "return x;"
+
+select:
+  - platform: aldes_cb
+    aldes_cb_id: cb
+    air_mode_set:
+      name: "Air (à envoyer)"
+    ecs_mode_set:
+      name: "ECS (à envoyer)"
+
+number:
+  - platform: aldes_cb
+    aldes_cb_id: cb
+    setpoint_k1:
+      name: "Consigne K1 (à envoyer)"
+    setpoint_k2:
+      name: "Consigne K2 (à envoyer)"
+    setpoint_k3:
+      name: "Consigne K3 (à envoyer)"
+    setpoint_k4:
+      name: "Consigne K4 (à envoyer)"
+
+button:
+  - platform: aldes_cb
+    aldes_cb_id: cb
+    send_setpoints:
+      name: "Envoyer les consignes"
+    send_air:
+      name: "Envoyer le mode air"
+    send_ecs:
+      name: "Envoyer le mode ECS"
+    vacation_clear:
+      name: "Effacer le mode absence"
+    arm:
+      name: "Armer (1 essai)"
+    stop:
+      name: "Arrêter - USB off"
+    usb_on:
+      name: "USB on (sans rejeu)"
