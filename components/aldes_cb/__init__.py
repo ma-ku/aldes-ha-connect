@@ -63,19 +63,18 @@ CONFIG_SCHEMA = cv.All(
     ).extend(cv.COMPONENT_SCHEMA),
     esp32.only_on_variant(
         supported=[VARIANT_ESP32S3, VARIANT_ESP32S31],
-        msg_prefix="Der AldesConnect-Box-Klon",
+        msg_prefix="The Aldes ConnectBox Clone",
     ),
 )
 
 
 def _require_esp_idf(config):
     if CORE.using_arduino:
-        raise cv.Invalid("aldes_cb braucht esp_tinyusb und damit framework: type: esp-idf")
+        raise cv.Invalid("aldes_cb needs esp_tinyusb and ultimately framework: type: esp-idf")
     return config
 
 
 FINAL_VALIDATE_SCHEMA = _require_esp_idf
-
 
 async def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])

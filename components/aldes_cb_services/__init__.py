@@ -21,7 +21,6 @@ CONFIG_SCHEMA = cv.Schema(
     }
 )
 
-
 async def to_code(config):
     parent = await cg.get_variable(config[CONF_ALDES_CB_ID])
     cg.add(parent.enable_services())
